@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Absensi Tamu Haflah</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+  <h2>ABSENSI TAMU HAFLAH</h2>
+  <p>Silakan scan QR Code karcis tamu.</p>
+
+  <select id="pos">
+    <option value="Pos 1">Pos 1</option>
+    <option value="Pos 2">Pos 2</option>
+    <option value="Pos 3">Pos 3</option>
+  </select>
+
+  <div id="reader" style="width:300px"></div>
+  <div id="hasil">Menunggu scan...</div>
+
+  <script>
+    const scanner = new Html5Qrcode("reader");
+    const alamatServer =
+      "https://script.google.com/macros/s/AKfycbydSWSwyH65D9HXI1FClJV8JJJvavN39aRaya2CocLYwSbKkTDSqg2FbfNFlgNquMH0MA/exec";
+
+    let sedangMemproses = false;
+
+    function mulaiScan() {
+      scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        hasilScan
+      ).catch(function(error) {
+        document.getElementById("hasil").innerText =
+          "KAMERA GAGAL DIBUKA: " + error;
+      });
+    }
+
+    function hasilScan(teks) {
+      if (sedangMemproses) return;
+      sedangMemproses = true;
+
+      scanner.stop().then(function() {
+        document.getElementById("hasil").innerText =
+          "Memeriksa tiket: " + teks;
+
+        const idCallback = "hasilServer";
+
+        window[idCallback] = function(hasil) {
+          document.getElementById("hasil").innerText = hasil;
+          delete window[idCallback];
+
+          setTimeout(function() {
+            sedangMemproses = false;
+            mulaiScan();
+          }, 2500);
+        };
+
+        const alamat = alamatServer +
+          "?action=scan&id=" + encodeURIComponent(teks) +
+          "&pos=" + encodeURIComponent(
+            document.getElementById("pos").value
+          ) +
+          "&callback=" + idCallback +
+          "&t=" + Date.now();
+
+        const script = document.createElement("script");
+        script.src = alamat;
+        script.onerror = function() {
+          document.getElementById("hasil").innerText =
+            "GAGAL MENGHUBUNGI DATABASE";
+          delete window[idCallback];
+
+          setTimeout(function() {
+            sedangMemproses = false;
+            mulaiScan();
+          }, 2500);
+        };
+
+        document.body.appendChild(script);
+      });
+    }
+
+    mulaiScan();
+  </script>
+</body>
+</html>
